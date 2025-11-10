@@ -1,0 +1,6 @@
+.v/
+**/__pycache__
+output/
+*.jpg
+*.jpeg
+*.png
