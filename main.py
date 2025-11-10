@@ -1,8 +1,3 @@
-"""
-FastAPI OCR Service
-A professional REST API for text extraction from images using PaddleOCR
-"""
-
 import logging
 import sys
 from pathlib import Path
@@ -153,9 +148,9 @@ async def extract_text(
         
         # Run OCR
         logger.info(f"Running OCR on: {image.filename}")
-        result = ocr.ocr(temp_file_path)
+        result = ocr.predict(input=temp_file_path)
         
-        if not result or not result[0]:
+        if not result:
             logger.warning(f"No text detected in image: {image.filename}")
             return OCRResponse(
                 success=True,
@@ -164,25 +159,38 @@ async def extract_text(
                 message="No text detected in the image"
             )
         
-        # Extract text and confidence scores
+        # Extract text and confidence scores from the new PaddleOCR format
         extracted_lines = []
         confidence_scores = []
         
-        for line in result[0]:
-            # PaddleOCR result format: [bbox, (text, confidence)]
-            if isinstance(line, (list, tuple)) and len(line) >= 2:
-                text_info = line[1]
-                if isinstance(text_info, (list, tuple)) and len(text_info) >= 2:
-                    text = text_info[0]
-                    confidence = text_info[1]
-                    extracted_lines.append(str(text))
-                    confidence_scores.append(float(confidence))
-                elif isinstance(text_info, str):
-                    # Sometimes it's just text without confidence
-                    extracted_lines.append(text_info)
-            elif isinstance(line, str):
-                # Direct text without bbox
-                extracted_lines.append(line)
+        # Handle the new result format: result is a list of result objects
+        for res_obj in result:
+            # Get the actual result dictionary
+            if hasattr(res_obj, 'res'):
+                res_data = res_obj.res
+            elif isinstance(res_obj, dict) and 'res' in res_obj:
+                res_data = res_obj['res']
+            else:
+                res_data = res_obj
+            
+            # Extract rec_texts and rec_scores
+            if isinstance(res_data, dict):
+                rec_texts = res_data.get('rec_texts', [])
+                rec_scores = res_data.get('rec_scores', [])
+                
+                if rec_texts:
+                    extracted_lines.extend([str(text) for text in rec_texts])
+                    if rec_scores is not None and len(rec_scores) > 0:
+                        confidence_scores.extend([float(score) for score in rec_scores])
+        
+        if not extracted_lines:
+            logger.warning(f"No text extracted from image: {image.filename}")
+            return OCRResponse(
+                success=True,
+                scanned_text="",
+                confidence=0.0,
+                message="No text detected in the image"
+            )
         
         # Combine all text
         scanned_text = "\n".join(extracted_lines)
