@@ -11,13 +11,12 @@ from pydantic import BaseModel, Field
 from paddleocr import PaddleOCR
 import uvicorn
 
-# Configure logging
+# Configure logging (console only)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('ocr_service.log')
+        logging.StreamHandler(sys.stdout)
     ]
 )
 
@@ -28,8 +27,8 @@ app = FastAPI(
     title="OCR Text Extraction API",
     description="Extract text from images using PaddleOCR",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url=None,
+    redoc_url=None
 )
 
 # Response model
@@ -77,16 +76,6 @@ async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("Shutting down OCR API service...")
 
-@app.get("/", tags=["Health"])
-async def root():
-    """Root endpoint - API health check"""
-    logger.info("Health check requested")
-    return {
-        "status": "healthy",
-        "service": "OCR Text Extraction API",
-        "version": "1.0.0"
-    }
-
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Detailed health check endpoint"""
@@ -109,19 +98,11 @@ async def health_check():
             }
         )
 
-@app.post("/ocr/extract", response_model=OCRResponse, tags=["OCR"])
+@app.post("/scan", response_model=OCRResponse, tags=["OCR"])
 async def extract_text(
     image: UploadFile = File(..., description="Image file to process (JPEG, PNG, etc.)")
 ):
-    """
-    Extract text from an uploaded image using OCR
-    
-    Args:
-        image: Image file to process
-        
-    Returns:
-        OCRResponse with extracted text and metadata
-    """
+    """Extract text from an uploaded image using OCR"""
     logger.info(f"OCR request received - File: {image.filename}, Type: {image.content_type}")
     
     # Validate file type
