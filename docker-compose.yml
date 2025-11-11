@@ -1,0 +1,29 @@
+services:
+  ocr-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ocr-api-service
+    ports:
+      - "9000:9000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Optional: Mount a volume for PaddleOCR models to persist them
+      - paddleocr-models:/root/.paddleocr
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:9000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  paddleocr-models:
+    driver: local
