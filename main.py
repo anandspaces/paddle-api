@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 import tempfile
 import os
-
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, File, UploadFile, HTTPException, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -31,6 +31,15 @@ app = FastAPI(
     redoc_url=None
 )
 
+
+# CORS config
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Response model
 class OCRResponse(BaseModel):
     """Response model for OCR results"""
@@ -104,15 +113,6 @@ async def extract_text(
 ):
     """Extract text from an uploaded image using OCR"""
     logger.info(f"OCR request received - File: {image.filename}, Type: {image.content_type}")
-    
-    # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/jpg", "image/bmp", "image/tiff", "application/pdf"]
-    if image.content_type not in allowed_types:
-        logger.warning(f"Invalid file type: {image.content_type}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file type. Allowed types: {', '.join(allowed_types)}"
-        )
     
     temp_file_path = None
     
